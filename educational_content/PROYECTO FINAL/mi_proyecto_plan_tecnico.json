@@ -1,0 +1,78 @@
+{
+  "propuesta_titulo": "Sistema Multi-Agente para Predicción de Toxicidad de Nanopartículas",
+  "herramientas_seleccionadas": [
+    "U3_ml_clasico",
+    "U3_redes_neuronales",
+    "U4_llms_generativa",
+    "U5_agentes_langchain",
+    "U5_rag_memoria",
+    "U5_langsmith",
+    "U6_api_fastapi"
+  ],
+  "pipeline": [
+    {
+      "etapa": "Ingesta de Datos",
+      "descripcion": "Descarga HaHa-Manual.csv desde Zenodo; consulta Materials Project API",
+      "herramienta": "Zenodo API + requests"
+    },
+    {
+      "etapa": "Limpieza",
+      "descripcion": "Imputación de nulos, eliminación de duplicados, remoción de outliers IQR",
+      "herramienta": "pandas + numpy"
+    },
+    {
+      "etapa": "Ingeniería de Features",
+      "descripcion": "SelectKBest top-10 features, StandardScaler, codificación categórica",
+      "herramienta": "scikit-learn"
+    },
+    {
+      "etapa": "Entrenamiento ML",
+      "descripcion": "Random Forest, SVM, MLP con cross-validation 3-fold",
+      "herramienta": "scikit-learn"
+    },
+    {
+      "etapa": "Evaluación",
+      "descripcion": "Accuracy, F1, ROC-AUC; selección del mejor modelo",
+      "herramienta": "scikit-learn metrics"
+    },
+    {
+      "etapa": "Interpretabilidad",
+      "descripcion": "SHAP values o feature_importances; explicación vía LLM",
+      "herramienta": "shap + OpenRouter"
+    },
+    {
+      "etapa": "Predicción",
+      "descripcion": "Nuevas NPs con nivel de riesgo BAJO/MODERADO/ALTO",
+      "herramienta": "sklearn + Neo4j"
+    },
+    {
+      "etapa": "Visualización y Reporte",
+      "descripcion": "ROC curve, feature importance, reporte Markdown generado por LLM",
+      "herramienta": "matplotlib + OpenRouter"
+    },
+    {
+      "etapa": "Despliegue",
+      "descripcion": "API REST FastAPI con /predict y /health",
+      "herramienta": "FastAPI + uvicorn"
+    },
+    {
+      "etapa": "Orquestación",
+      "descripcion": "LangGraph StateGraph coordina los 8 agentes; LangSmith traza todo",
+      "herramienta": "LangGraph + LangSmith"
+    },
+    {
+      "etapa": "Memoria de Grafo",
+      "descripcion": "Neo4j almacena Dataset→Modelo→Predicción como nodos y relaciones",
+      "herramienta": "Neo4j AuraDB"
+    }
+  ],
+  "pipeline_completo": true,
+  "apis_externas": [
+    "Zenodo",
+    "Materials Project",
+    "OpenRouter",
+    "LangSmith",
+    "Neo4j AuraDB"
+  ],
+  "n_agentes": 9
+}

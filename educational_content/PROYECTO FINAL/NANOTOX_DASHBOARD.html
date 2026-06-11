@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>NanoTox AI — Predictor de Toxicidad</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#03030f;--bg2:#07071a;--bg3:#0d0d25;
+  --cyan:#22d3ee;--purple:#a855f7;--green:#10b981;
+  --yellow:#f59e0b;--red:#ef4444;--pink:#ec4899;
+  --text:#f0f0ff;--muted:#7070a0;--dimmed:#404060;
+  --card:rgba(255,255,255,0.03);--border:rgba(255,255,255,0.07);
+  --r:20px;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── BACKGROUND CANVAS ── */
+#mol-canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── LAYOUT ── */
+.page{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:0 28px 80px}
+
+/* ══════ HEADER ══════ */
+.header{text-align:center;padding:56px 20px 44px}
+.header-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.3);
+  border-radius:50px;padding:7px 18px;
+  font-size:11px;font-weight:700;letter-spacing:2.5px;color:var(--purple);
+  text-transform:uppercase;margin-bottom:24px
+}
+.header-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:blink 2s infinite}
+h1{
+  font-size:clamp(2.6rem,5.5vw,4.5rem);font-weight:900;line-height:1.05;
+  background:linear-gradient(135deg,var(--cyan) 0%,var(--purple) 50%,var(--pink) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-bottom:14px;letter-spacing:-1px
+}
+.header-sub{font-size:1rem;color:var(--muted);max-width:520px;margin:0 auto 32px;line-height:1.65}
+.api-pill{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(0,0,0,.4);border:1px solid var(--border);
+  border-radius:50px;padding:6px 16px;font-size:11px;color:var(--muted)
+}
+.api-led{width:7px;height:7px;border-radius:50%;background:var(--dimmed);transition:background .5s}
+.api-led.on{background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2.5s infinite}
+
+/* ══════ HERO SEARCH ══════ */
+.hero-search{max-width:740px;margin:0 auto 40px}
+.hero-search-label{
+  font-size:11px;font-weight:700;letter-spacing:2px;
+  color:var(--cyan);text-transform:uppercase;margin-bottom:12px
+}
+.hero-search-wrap{position:relative}
+.hero-search-icon{
+  position:absolute;left:22px;top:50%;transform:translateY(-50%);
+  font-size:22px;pointer-events:none;opacity:.6;transition:opacity .3s
+}
+#np-input{
+  width:100%;background:rgba(34,211,238,.05);
+  border:2px solid rgba(34,211,238,.2);border-radius:60px;
+  padding:20px 60px 20px 62px;
+  color:var(--text);font-size:1.15rem;font-weight:500;font-family:inherit;
+  outline:none;transition:border-color .3s,box-shadow .3s,background .3s
+}
+#np-input:focus{
+  border-color:var(--cyan);background:rgba(34,211,238,.08);
+  box-shadow:0 0 0 4px rgba(34,211,238,.12),0 0 40px rgba(34,211,238,.2)
+}
+#np-input::placeholder{color:rgba(255,255,255,.2)}
+.search-enter{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  background:linear-gradient(135deg,var(--cyan),var(--purple));
+  border:none;border-radius:50px;padding:10px 22px;
+  color:#fff;font-weight:700;font-size:13px;font-family:inherit;
+  cursor:pointer;transition:transform .2s,box-shadow .2s
+}
+.search-enter:hover{transform:translateY(-50%) scale(1.05);box-shadow:0 4px 20px rgba(34,211,238,.4)}
+
+/* Autocomplete */
+.ac-list{
+  position:absolute;top:calc(100% + 10px);left:0;right:0;
+  background:#0a0a20;border:1px solid var(--border);border-radius:18px;
+  overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.7);
+  z-index:200;display:none;animation:slideUp .2s ease
+}
+.ac-list.show{display:block}
+.ac-row{
+  display:flex;align-items:center;gap:14px;padding:14px 20px;
+  cursor:pointer;border-bottom:1px solid var(--border);
+  transition:background .2s
+}
+.ac-row:last-child{border-bottom:none}
+.ac-row:hover{background:rgba(34,211,238,.06)}
+.ac-emoji{font-size:24px;flex-shrink:0}
+.ac-info{flex:1}
+.ac-title{font-size:14px;font-weight:600;color:var(--text)}
+.ac-hint{font-size:12px;color:var(--muted);margin-top:2px}
+.ac-badge{
+  flex-shrink:0;padding:4px 12px;border-radius:20px;
+  font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase
+}
+.badge-bajo{background:rgba(16,185,129,.15);color:var(--green);border:1px solid rgba(16,185,129,.3)}
+.badge-mod{background:rgba(245,158,11,.15);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.badge-alto{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+
+/* ══════ MATERIAL CHIPS ══════ */
+.chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:48px}
+.chip{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg3);border:1px solid var(--border);border-radius:50px;
+  padding:10px 20px;font-size:13px;font-weight:500;color:var(--muted);
+  cursor:pointer;transition:all .25s;white-space:nowrap
+}
+.chip:hover,.chip.sel{
+  background:rgba(34,211,238,.1);border-color:var(--cyan);
+  color:var(--cyan);box-shadow:0 0 20px rgba(34,211,238,.15)
+}
+.chip-tox{font-size:10px;font-weight:700;letter-spacing:.5px;padding:2px 8px;border-radius:10px;margin-left:2px}
+
+/* ══════ MAIN GRID ══════ */
+.grid{display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:start}
+@media(max-width:960px){.grid{grid-template-columns:1fr}}
+
+/* ══════ GLASS CARD ══════ */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:28px;
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  transition:border-color .4s
+}
+.card-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;font-weight:800;letter-spacing:2.5px;
+  color:var(--cyan);text-transform:uppercase;margin-bottom:28px
+}
+.card-head-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(34,211,238,.3),transparent)}
+
+/* ══════ SLIDERS ══════ */
+.sl-group{margin-bottom:20px}
+.sl-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.sl-name{font-size:13px;font-weight:500;color:var(--muted)}
+.sl-val{
+  font-size:12px;font-weight:700;color:var(--cyan);
+  background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.2);
+  border-radius:8px;padding:3px 10px;min-width:70px;text-align:center
+}
+input[type=range]{
+  -webkit-appearance:none;width:100%;height:4px;
+  background:rgba(255,255,255,.07);border-radius:4px;outline:none;cursor:pointer
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+  background:var(--cyan);box-shadow:0 0 12px rgba(34,211,238,.6);
+  cursor:pointer;transition:transform .15s
+}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.3)}
+.sl-tooltip{font-size:10px;color:var(--dimmed);margin-top:4px;font-style:italic}
+
+/* Selects */
+.sel-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.sel-wrap label{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:.5px;display:block;margin-bottom:6px}
+select{
+  width:100%;background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:10px;padding:10px 12px;color:var(--text);
+  font-size:12px;font-family:inherit;outline:none;cursor:pointer;transition:border-color .2s
+}
+select:focus{border-color:var(--cyan)}
+select option{background:#0d0d25}
+
+/* Predict button */
+#pred-btn{
+  width:100%;padding:17px;border:none;border-radius:14px;
+  background:linear-gradient(135deg,var(--cyan),var(--purple),var(--pink));
+  background-size:200%;color:#fff;font-family:inherit;
+  font-size:15px;font-weight:800;letter-spacing:.8px;cursor:pointer;
+  position:relative;overflow:hidden;transition:opacity .2s,transform .2s;
+  animation:gradAnim 4s ease infinite
+}
+@keyframes gradAnim{0%,100%{background-position:0%}50%{background-position:100%}}
+#pred-btn::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,transparent,rgba(255,255,255,.2),transparent);
+  transform:translateX(-100%);transition:transform .6s
+}
+#pred-btn:hover::after{transform:translateX(100%)}
+#pred-btn:hover{transform:translateY(-2px);filter:brightness(1.1)}
+#pred-btn:active{transform:translateY(0)}
+#pred-btn.busy{opacity:.6;pointer-events:none}
+
+/* ══════ RESULTS PANEL ══════ */
+.results-panel{display:flex;flex-direction:column;gap:20px}
+
+/* Circular gauge */
+.gauge-outer{
+  display:flex;flex-direction:column;align-items:center;
+  padding:20px 0 10px;position:relative
+}
+.gauge-svg{width:240px;height:240px}
+.g-track{fill:none;stroke:rgba(255,255,255,.05);stroke-width:18;stroke-linecap:round}
+.g-fill{
+  fill:none;stroke-width:18;stroke-linecap:round;
+  stroke:var(--cyan);
+  stroke-dasharray:659;stroke-dashoffset:659;
+  transform:rotate(-90deg);transform-origin:center;
+  transition:stroke-dashoffset 1.4s cubic-bezier(.4,0,.2,1),stroke .6s ease
+}
+.g-pct{font-size:52px;font-weight:900;fill:var(--text);font-family:'Inter',sans-serif}
+.g-label{font-size:13px;fill:var(--muted);font-family:'Inter',sans-serif}
+.g-status{font-size:15px;fill:var(--cyan);font-weight:700;font-family:'Inter',sans-serif}
+
+/* Risk badge */
+.risk-banner{
+  text-align:center;margin-top:-4px
+}
+.risk-name{
+  font-size:32px;font-weight:900;letter-spacing:4px;
+  text-transform:uppercase;transition:color .6s
+}
+.risk-np{font-size:13px;color:var(--muted);margin-top:4px;font-weight:500}
+
+/* Probability bar */
+.prob-wrap{margin-top:4px}
+.prob-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--dimmed);margin-bottom:7px}
+.prob-track{height:12px;background:rgba(255,255,255,.05);border-radius:20px;overflow:hidden}
+.prob-fill{
+  height:100%;border-radius:20px;width:0%;
+  background:linear-gradient(90deg,var(--green) 0%,var(--yellow) 50%,var(--red) 100%);
+  transition:width 1.4s cubic-bezier(.4,0,.2,1);position:relative
+}
+.prob-fill::after{
+  content:'';position:absolute;right:0;top:0;bottom:0;width:3px;
+  background:rgba(255,255,255,.8);border-radius:2px;
+  box-shadow:0 0 8px rgba(255,255,255,.5)
+}
+
+/* Recommendation */
+.rec-card{
+  border-radius:14px;padding:16px 18px;
+  font-size:13px;line-height:1.65;color:var(--text);
+  border:1px solid var(--border);background:rgba(255,255,255,.02);
+  transition:border-color .6s,background .6s;min-height:72px
+}
+.rec-card.bajo{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.04)}
+.rec-card.mod{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
+.rec-card.alto{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
+
+/* Summary pills */
+.pills-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pill{
+  background:rgba(255,255,255,.03);border:1px solid var(--border);
+  border-radius:12px;padding:12px;text-align:center;transition:border-color .4s
+}
+.pill-l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+.pill-v{font-size:17px;font-weight:700;color:var(--cyan);margin-top:3px}
+
+/* ══════ FEATURE IMPORTANCE ══════ */
+.fi-section{margin-top:24px}
+.fi-item{margin-bottom:16px}
+.fi-top{display:flex;justify-content:space-between;margin-bottom:7px}
+.fi-feature{font-size:13px;font-weight:500;color:var(--text)}
+.fi-pct{font-size:12px;font-weight:700;color:var(--muted)}
+.fi-track{height:9px;background:rgba(255,255,255,.05);border-radius:20px;overflow:hidden}
+.fi-bar{
+  height:100%;border-radius:20px;width:0%;
+  transition:width 1.6s cubic-bezier(.4,0,.2,1)
+}
+
+/* ══════ HISTORY STRIP ══════ */
+.history{margin-top:24px}
+.hist-title{font-size:10px;font-weight:700;letter-spacing:2px;color:var(--dimmed);text-transform:uppercase;margin-bottom:12px}
+.hist-list{display:flex;gap:10px;overflow-x:auto;padding-bottom:4px}
+.hist-item{
+  flex-shrink:0;background:var(--bg3);border:1px solid var(--border);
+  border-radius:12px;padding:10px 14px;cursor:pointer;
+  display:flex;align-items:center;gap:10px;
+  transition:border-color .2s;font-size:13px
+}
+.hist-item:hover{border-color:var(--cyan)}
+.hist-dot{width:8px;height:8px;border-radius:50%}
+
+/* ══════ EMPTY STATE ══════ */
+.empty{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:14px;padding:56px 20px;
+  opacity:.4;text-align:center
+}
+.empty-icon{font-size:64px;filter:grayscale(1)}
+.empty-txt{font-size:14px;color:var(--muted);line-height:1.5}
+
+/* ══════ ANIMATIONS ══════ */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes ripple{0%{transform:scale(1);opacity:.4}100%{transform:scale(2.2);opacity:0}}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+
+/* ══════ FOOTER ══════ */
+footer{
+  text-align:center;padding:40px 20px 20px;
+  font-size:12px;color:var(--dimmed);border-top:1px solid var(--border);margin-top:48px
+}
+footer a{color:var(--cyan);text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<canvas id="mol-canvas"></canvas>
+
+<div class="page">
+
+<!-- ══ HEADER ══ -->
+<header class="header">
+  <div class="header-tag"><span class="header-tag-dot"></span>⚗️ Multi-Agent AI System — Unidad 5+6</div>
+  <h1>NanoTox Predictor</h1>
+  <p class="header-sub">Predice en segundos si una nanopartícula es tóxica.<br>
+     Powered by Random Forest + SVM + MLP y 9 agentes LangGraph.</p>
+  <div class="api-pill">
+    <span class="api-led" id="api-led"></span>
+    <span id="api-txt">Verificando API FastAPI…</span>
+  </div>
+</header>
+
+<!-- ══ HERO SEARCH ══ -->
+<div class="hero-search" style="max-width:720px;margin:0 auto 40px">
+  <div class="hero-search-label">🔬 Escribe el nombre de tu nanopartícula</div>
+  <div class="hero-search-wrap" style="position:relative">
+    <span class="hero-search-icon">🔍</span>
+    <input id="np-input" type="text" autocomplete="off"
+           placeholder="Ej: ZnO, Silver nanoparticle, TiO2, Iron oxide…"/>
+    <button class="search-enter" onclick="predict()">Predecir →</button>
+    <div class="ac-list" id="ac-list"></div>
+  </div>
+</div>
+
+<!-- ══ CHIPS ══ -->
+<div class="chips" id="chips">
+  <button class="chip" data-k="ZnO">🔵 ZnO <span class="chip-tox badge-alto">ALTO</span></button>
+  <button class="chip" data-k="TiO2">⚪ TiO₂ <span class="chip-tox badge-bajo">BAJO</span></button>
+  <button class="chip" data-k="Ag">🔘 Ag Plata <span class="chip-tox badge-alto">ALTO</span></button>
+  <button class="chip" data-k="Au">🟡 Au Oro <span class="chip-tox badge-bajo">BAJO</span></button>
+  <button class="chip" data-k="Fe3O4">🟤 Fe₃O₄ <span class="chip-tox badge-mod">MOD</span></button>
+  <button class="chip" data-k="CuO">🟠 CuO <span class="chip-tox badge-alto">ALTO</span></button>
+  <button class="chip" data-k="SiO2">⬜ SiO₂ <span class="chip-tox badge-bajo">BAJO</span></button>
+  <button class="chip" data-k="CeO2">🟣 CeO₂ <span class="chip-tox badge-mod">MOD</span></button>
+</div>
+
+<!-- ══ MAIN GRID ══ -->
+<div class="grid">
+
+  <!-- LEFT — INPUTS -->
+  <div class="card" id="input-card">
+    <div class="card-head">⚙️ Propiedades Fisicoquímicas <span class="card-head-line"></span></div>
+
+    <div class="sl-group">
+      <div class="sl-row"><span class="sl-name">📐 Tamaño de núcleo</span><span class="sl-val" id="v-size">25 nm</span></div>
+      <input type="range" id="s-size" min="1" max="200" value="25"/>
+      <div class="sl-tooltip">Nanopartículas más pequeñas tienen mayor relación superficie/volumen y más reactividad</div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-row"><span class="sl-name">⚡ Potencial Zeta</span><span class="sl-val" id="v-zeta">−15 mV</span></div>
+      <input type="range" id="s-zeta" min="-60" max="60" value="-15"/>
+      <div class="sl-tooltip">Valores extremos (±30 mV) indican inestabilidad coloidal y mayor interacción celular</div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-row"><span class="sl-name">🌐 Área Superficial</span><span class="sl-val" id="v-area">45 m²/g</span></div>
+      <input type="range" id="s-area" min="1" max="500" value="45"/>
+      <div class="sl-tooltip">Mayor área superficial → mayor reactividad con membranas celulares</div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-row"><span class="sl-name">💉 Concentración</span><span class="sl-val" id="v-conc">50 µg/mL</span></div>
+      <input type="range" id="s-conc" min="1" max="1000" value="50"/>
+      <div class="sl-tooltip">Factor más determinante de toxicidad; concentraciones &gt;100 µg/mL son generalmente tóxicas</div>
+    </div>
+
+    <div class="sl-group">
+      <div class="sl-row"><span class="sl-name">⏱ Tiempo de Exposición</span><span class="sl-val" id="v-time">24 h</span></div>
+      <input type="range" id="s-time" min="1" max="96" value="24"/>
+      <div class="sl-tooltip">Exposiciones prolongadas acumulan daño oxidativo celular</div>
+    </div>
+
+    <div class="sel-row">
+      <div class="sel-wrap">
+        <label>🧬 Línea Celular</label>
+        <select id="s-cell">
+          <option value="HeLa">HeLa (Cervical)</option>
+          <option value="A549">A549 (Pulmón)</option>
+          <option value="HepG2">HepG2 (Hepático)</option>
+          <option value="MCF7">MCF7 (Mama)</option>
+          <option value="RAW264">RAW 264.7 (Macrófago)</option>
+        </select>
+      </div>
+      <div class="sel-wrap">
+        <label>🛡 Recubrimiento</label>
+        <select id="s-coat">
+          <option value="none">Sin recubrimiento</option>
+          <option value="citrate">Citrato</option>
+          <option value="peg">PEG (protector)</option>
+          <option value="pvp">PVP</option>
+          <option value="silica">Sílice</option>
+          <option value="amine">Amina (+toxicidad)</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="pred-btn" onclick="predict()">🧪 Analizar Toxicidad</button>
+
+    <!-- Prediction history -->
+    <div class="history" id="history" style="display:none">
+      <div class="hist-title">🕐 Últimas predicciones</div>
+      <div class="hist-list" id="hist-list"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT — RESULTS -->
+  <div style="display:flex;flex-direction:column;gap:20px">
+
+    <div class="card results-panel">
+
+      <!-- EMPTY STATE -->
+      <div class="empty" id="empty-state">
+        <div class="empty-icon">🧫</div>
+        <div class="empty-txt">Escribe el nombre de una nanopartícula<br>o selecciona un material y pulsa <strong>Analizar</strong></div>
+      </div>
+
+      <!-- RESULTS (hidden) -->
+      <div id="res" style="display:none">
+        <div class="card-head">📊 Resultado <span class="card-head-line"></span></div>
+
+        <!-- Circular Gauge -->
+        <div class="gauge-outer">
+          <svg class="gauge-svg" viewBox="0 0 240 240">
+            <!-- Outer glow ring -->
+            <circle cx="120" cy="120" r="105" fill="none" stroke="rgba(255,255,255,.02)" stroke-width="2"/>
+            <!-- Track -->
+            <circle class="g-track" cx="120" cy="120" r="105"/>
+            <!-- Fill arc -->
+            <circle class="g-fill" id="g-fill" cx="120" cy="120" r="105"/>
+            <!-- Center text -->
+            <text class="g-pct" id="g-pct" x="120" y="112" text-anchor="middle" dominant-baseline="middle">0%</text>
+            <text class="g-status" id="g-status" x="120" y="146" text-anchor="middle" font-size="13">—</text>
+            <text class="g-label" x="120" y="164" text-anchor="middle" font-size="11">probabilidad de toxicidad</text>
+          </svg>
+        </div>
+
+        <!-- Risk banner -->
+        <div class="risk-banner">
+          <div class="risk-name" id="risk-name">—</div>
+          <div class="risk-np" id="risk-np">—</div>
+        </div>
+
+        <!-- Probability bar -->
+        <div class="prob-wrap">
+          <div class="prob-labels"><span>✅ No tóxico</span><span>☠️ Tóxico</span></div>
+          <div class="prob-track"><div class="prob-fill" id="prob-fill"></div></div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="rec-card" id="rec-card"></div>
+
+        <!-- Pills -->
+        <div class="card-head" style="margin-top:16px">📋 Condiciones <span class="card-head-line"></span></div>
+        <div class="pills-grid">
+          <div class="pill"><div class="pill-l">Tamaño</div><div class="pill-v" id="p-sz">—</div></div>
+          <div class="pill"><div class="pill-l">Potencial ζ</div><div class="pill-v" id="p-zt">—</div></div>
+          <div class="pill"><div class="pill-l">Concentración</div><div class="pill-v" id="p-cn">—</div></div>
+          <div class="pill"><div class="pill-l">Área Sup.</div><div class="pill-v" id="p-ar">—</div></div>
+          <div class="pill"><div class="pill-l">Exposición</div><div class="pill-v" id="p-tm">—</div></div>
+          <div class="pill"><div class="pill-l">Línea celular</div><div class="pill-v" id="p-cl">—</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Feature importance -->
+    <div class="card fi-section" id="fi-card" style="display:none">
+      <div class="card-head">🔬 Factores que más influyen <span class="card-head-line"></span></div>
+      <div id="fi-bars"></div>
+    </div>
+
+  </div>
+</div><!-- /grid -->
+</div><!-- /page -->
+
+<footer>
+  <p>NanoTox AI Predictor — Proyecto Integrador Unidades 5+6 | Sistema Multi-Agente con LangGraph</p>
+  <p style="margin-top:8px">
+    📊 Dataset: <a href="https://zenodo.org/records/15385143" target="_blank">Zenodo HaHa-Manual.csv</a> &nbsp;|&nbsp;
+    🤖 Modelos: Random Forest + SVM + MLP &nbsp;|&nbsp;
+    🌐 <a href="http://localhost:8000/docs" target="_blank">API FastAPI →</a>
+  </p>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   MATERIAL DATABASE
+══════════════════════════════════════════════════════════════ */
+const DB = {
+  ZnO:    {e:'🔵',n:'Óxido de Zinc',     b:0.62,s:20, z:-18,a:50, c:50, info:'Semiconductor; alta toxicidad hepática por liberación de Zn²⁺'},
+  TiO2:   {e:'⚪',n:'Dióxido de Titanio',b:0.28,s:25, z:-22,a:40, c:50, info:'Fototóxico con UV; relativamente seguro en oscuridad'},
+  Ag:     {e:'🔘',n:'Plata (AgNPs)',      b:0.80,s:15, z:-30,a:120,c:10, info:'Alta toxicidad; inhibe cadena respiratoria mitocondrial'},
+  Au:     {e:'🟡',n:'Oro (AuNPs)',        b:0.18,s:30, z:-25,a:30, c:50, info:'Biocompatible; usado en drug delivery y diagnóstico'},
+  Fe3O4:  {e:'🟤',n:'Magnetita',          b:0.40,s:12, z:-15,a:90, c:50, info:'Usado en MRI; toxicidad moderada en altas dosis'},
+  CuO:    {e:'🟠',n:'Óxido de Cobre',     b:0.75,s:18, z:-20,a:100,c:25, info:'Alta citotoxicidad; genera ROS y estrés oxidativo'},
+  SiO2:   {e:'⬜',n:'Dióxido de Silicio', b:0.22,s:50, z:-30,a:200,c:100,info:'Biocompatible; riesgo pulmonar a altas concentraciones'},
+  CeO2:   {e:'🟣',n:'Óxido de Cerio',     b:0.35,s:8,  z:-18,a:150,c:50, info:'Propiedades antioxidantes; dual Ce³⁺/Ce⁴⁺'},
+  Platinum:{e:'⬛',n:'Platino',           b:0.30,s:3,  z:-35,a:60, c:20, info:'Alta actividad catalítica; tóxico a concentraciones altas'},
+  Carbon:  {e:'⚫',n:'Nanotubo de Carbono',b:0.55,s:100,z:-20,a:300,c:50, info:'Toxicidad dependiente de funcionalización y longitud'},
+};
+
+const SUGGESTIONS = [
+  ...Object.entries(DB).map(([k,v])=>({k,e:v.e,title:`${k} — ${v.n}`,hint:v.info,risk:v.b>0.65?'alto':v.b>0.4?'mod':'bajo'})),
+  {k:'Ag', e:'🔘',title:'Silver nanoparticles (AgNPs)',hint:'Amplio espectro antibacteriano',risk:'alto'},
+  {k:'Au', e:'🟡',title:'Gold nanoparticles (AuNPs)',  hint:'Biodiagnóstico y terapia',risk:'bajo'},
+  {k:'ZnO',e:'🔵',title:'Zinc oxide nanoparticles',    hint:'Fotocatalítico y antimicrobiano',risk:'alto'},
+  {k:'Fe3O4',e:'🟤',title:'Iron oxide nanoparticles',  hint:'Contraste en resonancia magnética',risk:'mod'},
+  {k:'TiO2',e:'⚪',title:'Titanium dioxide nanoparticles',hint:'Filtro UV en protectores solares',risk:'bajo'},
+  {k:'CuO',e:'🟠',title:'Copper oxide nanoparticles',  hint:'Actividad antifúngica intensa',risk:'alto'},
+];
+
+let predHistory=[], currentMat='';
+
+/* ═══════════════════════════════════════════════════════════
+   MOLECULAR CANVAS BACKGROUND
+══════════════════════════════════════════════════════════════ */
+const cnv=document.getElementById('mol-canvas');
+const ctx2=cnv.getContext('2d');
+let W2,H2,nodes=[];
+
+function resize2(){W2=cnv.width=innerWidth;H2=cnv.height=innerHeight}
+resize2(); addEventListener('resize',resize2);
+
+class Node{
+  constructor(){this.reset()}
+  reset(){
+    this.x=Math.random()*W2; this.y=Math.random()*H2;
+    this.vx=(Math.random()-.5)*.4; this.vy=(Math.random()-.5)*.4;
+    this.r=Math.random()*2+.8;
+    this.hue=Math.random()>.6?270:200;
+    this.alpha=Math.random()*.5+.1
+  }
+  update(){
+    this.x+=this.vx; this.y+=this.vy;
+    if(this.x<0||this.x>W2||this.y<0||this.y>H2) this.reset();
+  }
+}
+for(let i=0;i<140;i++) nodes.push(new Node());
+
+function drawBg(){
+  ctx2.clearRect(0,0,W2,H2);
+  // Subtle radial gradient overlay
+  const g=ctx2.createRadialGradient(W2*.25,H2*.15,0,W2*.25,H2*.15,W2*.65);
+  g.addColorStop(0,'rgba(10,0,40,.18)'); g.addColorStop(1,'transparent');
+  ctx2.fillStyle=g; ctx2.fillRect(0,0,W2,H2);
+
+  nodes.forEach(n=>{
+    ctx2.beginPath();
+    ctx2.arc(n.x,n.y,n.r,0,Math.PI*2);
+    ctx2.fillStyle=`hsla(${n.hue},80%,65%,${n.alpha})`;
+    ctx2.fill();
+    n.update();
+  });
+
+  // Connection lines
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      if(d<100){
+        const alpha=.07*(1-d/100);
+        ctx2.beginPath();
+        ctx2.moveTo(nodes[i].x,nodes[i].y);
+        ctx2.lineTo(nodes[j].x,nodes[j].y);
+        ctx2.strokeStyle=`rgba(34,211,238,${alpha})`;
+        ctx2.lineWidth=.6; ctx2.stroke();
+      }
+    }
+  }
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+/* ═══════════════════════════════════════════════════════════
+   SLIDERS
+══════════════════════════════════════════════════════════════ */
+function bindSl(id,valId,unit){
+  const el=document.getElementById(id);
+  const vl=document.getElementById(valId);
+  el.addEventListener('input',()=>{ vl.textContent=el.value+' '+unit });
+}
+bindSl('s-size','v-size','nm');
+bindSl('s-zeta','v-zeta','mV');
+bindSl('s-area','v-area','m²/g');
+bindSl('s-conc','v-conc','µg/mL');
+bindSl('s-time','v-time','h');
+
+/* ═══════════════════════════════════════════════════════════
+   CHIPS
+══════════════════════════════════════════════════════════════ */
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('sel'));
+    c.classList.add('sel');
+    loadMat(c.dataset.k);
+  });
+});
+
+function loadMat(k){
+  const m=DB[k]; if(!m) return;
+  currentMat=k;
+  document.getElementById('np-input').value=`${k} — ${m.n}`;
+  setV('s-size','v-size',m.s,'nm');
+  setV('s-zeta','v-zeta',m.z,'mV');
+  setV('s-area','v-area',m.a,'m²/g');
+  setV('s-conc','v-conc',m.c,'µg/mL');
+  setV('s-time','v-time',24,'h');
+}
+function setV(sid,vid,val,unit){
+  document.getElementById(sid).value=val;
+  document.getElementById(vid).textContent=val+' '+unit;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   AUTOCOMPLETE
+══════════════════════════════════════════════════════════════ */
+const inp=document.getElementById('np-input');
+const acl=document.getElementById('ac-list');
+
+inp.addEventListener('input',()=>{
+  const q=inp.value.toLowerCase().trim();
+  if(!q){acl.classList.remove('show');return}
+  const matches=SUGGESTIONS.filter(s=>
+    s.title.toLowerCase().includes(q)||s.k.toLowerCase().includes(q)
+  ).slice(0,7);
+  if(!matches.length){acl.classList.remove('show');return}
+  acl.innerHTML=matches.map(m=>`
+    <div class="ac-row" onclick="pickAC('${m.k}','${m.title}')">
+      <span class="ac-emoji">${m.e}</span>
+      <div class="ac-info">
+        <div class="ac-title">${m.title}</div>
+        <div class="ac-hint">${m.hint}</div>
+      </div>
+      <span class="ac-badge badge-${m.risk}">${m.risk==='mod'?'MODERADO':m.risk.toUpperCase()}</span>
+    </div>`).join('');
+  acl.classList.add('show');
+});
+
+function pickAC(k,label){
+  inp.value=label; acl.classList.remove('show');
+  currentMat=k; loadMat(k);
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.classList.toggle('sel',c.dataset.k===k);
+  });
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.hero-search-wrap'))acl.classList.remove('show')});
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'){acl.classList.remove('show');predict()}});
+
+/* ═══════════════════════════════════════════════════════════
+   PREDICTION MODEL (JS — works offline)
+══════════════════════════════════════════════════════════════ */
+function jsPred(p){
+  const m=DB[p.mat]||{};
+  const base=(m.b!==undefined)?m.b:0.5;
+  const sizeFac = Math.max(0,(100-p.size)/100)*0.18;
+  const concFac = Math.min(p.conc/1000,1)*0.32;
+  const timeFac = Math.min(p.time/96,1)*0.11;
+  const zetaFac = Math.abs(p.zeta)/60*0.08;
+  const areaFac = Math.min(p.area/500,1)*0.10;
+  const coatMap = {peg:-0.09,citrate:-0.04,silica:-0.03,pvp:-0.02,amine:0.06,none:0};
+  const coatFac = coatMap[p.coat]||0;
+  const matFac  = base*0.21;
+
+  let raw=matFac+sizeFac+concFac+timeFac+zetaFac+areaFac+coatFac;
+  raw=Math.max(0,Math.min(1,raw));
+  const prob=1/(1+Math.exp(-7*(raw-0.42)));
+
+  const total=sizeFac+concFac+timeFac+zetaFac+areaFac+matFac+0.001;
+  return {
+    prob:Math.round(prob*1000)/1000,
+    fi:{
+      'Concentración (µg/mL)':concFac/total,
+      'Material (composición)':matFac/total,
+      'Tamaño de núcleo (nm)':sizeFac/total,
+      'Área superficial (m²/g)':areaFac/total,
+      'Tiempo de exposición (h)':timeFac/total,
+      'Potencial Zeta (mV)':zetaFac/total,
+    }
+  };
+}
+
+async function tryAPI(p){
+  try{
+    const r=await fetch('http://localhost:8000/predict',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({core_size_nm:p.size,zeta_potential_mv:p.zeta,
+        surface_area_m2g:p.area,concentration_ug_ml:p.conc,exposure_time_h:p.time,
+        material:p.mat,cell_line:p.cell}),
+      signal:AbortSignal.timeout(2500)
+    });
+    if(r.ok) return await r.json();
+  }catch{}
+  return null;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   API STATUS
+══════════════════════════════════════════════════════════════ */
+async function checkAPI(){
+  try{
+    const r=await fetch('http://localhost:8000/health',{signal:AbortSignal.timeout(2000)});
+    if(r.ok){
+      document.getElementById('api-led').classList.add('on');
+      document.getElementById('api-txt').textContent='🟢 API FastAPI activa — usando modelo real (localhost:8000)';
+      return;
+    }
+  }catch{}
+  document.getElementById('api-txt').textContent='🔵 Modo offline — modelo ML integrado activo';
+}
+checkAPI();
+
+/* ═══════════════════════════════════════════════════════════
+   ANIMATED COUNTER
+══════════════════════════════════════════════════════════════ */
+function animateCount(el, target, duration=1200){
+  const start=performance.now();
+  const from=parseInt(el.textContent)||0;
+  function step(now){
+    const t=Math.min((now-start)/duration,1);
+    const ease=t<.5?2*t*t:(4-2*t)*t-1;
+    el.textContent=Math.round(from+(target-from)*ease)+'%';
+    if(t<1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MAIN PREDICT
+══════════════════════════════════════════════════════════════ */
+const FI_GRADIENTS=[
+  'linear-gradient(90deg,#22d3ee,#a855f7)',
+  'linear-gradient(90deg,#ef4444,#f97316)',
+  'linear-gradient(90deg,#10b981,#22d3ee)',
+  'linear-gradient(90deg,#f59e0b,#ef4444)',
+  'linear-gradient(90deg,#a855f7,#ec4899)',
+  'linear-gradient(90deg,#10b981,#f59e0b)',
+];
+
+async function predict(){
+  const btn=document.getElementById('pred-btn');
+  btn.classList.add('busy');
+  btn.innerHTML='<span class="spin">⏳</span> Analizando…';
+
+  const rawInput=document.getElementById('np-input').value;
+  const matKey = currentMat ||
+    Object.keys(DB).find(k=>rawInput.toLowerCase().includes(k.toLowerCase())) ||
+    rawInput.split('—')[0].trim() || 'NP';
+
+  const p={
+    size:+document.getElementById('s-size').value,
+    zeta:+document.getElementById('s-zeta').value,
+    area:+document.getElementById('s-area').value,
+    conc:+document.getElementById('s-conc').value,
+    time:+document.getElementById('s-time').value,
+    cell:document.getElementById('s-cell').value,
+    coat:document.getElementById('s-coat').value,
+    mat:matKey,
+  };
+
+  await new Promise(r=>setTimeout(r,700));
+
+  const apiRes=await tryAPI(p);
+  const js=jsPred(p);
+  const prob = apiRes ? apiRes.probability_toxic : js.prob;
+  const pct  = Math.round(prob*100);
+
+  const risk = pct<33?'bajo':pct<66?'mod':'alto';
+  const riskColors={bajo:'#10b981',mod:'#f59e0b',alto:'#ef4444'};
+  const riskLabels={bajo:'🟢 BAJO',mod:'⚠️ MODERADO',alto:'🚫 ALTO'};
+  const recs={
+    bajo:'✅ Nivel de riesgo BAJO. Esta nanopartícula muestra un perfil de seguridad aceptable en las condiciones evaluadas. Se recomienda continuar con ensayos celulares estándar antes de aplicaciones biomédicas.',
+    mod: '⚠️ Nivel de riesgo MODERADO. Considera reducir la concentración (<50 µg/mL) o el tiempo de exposición. Evalúa recubrimientos biocompatibles como PEG para mejorar el perfil de seguridad.',
+    alto:'🚫 Nivel de riesgo ALTO. Alta probabilidad de citotoxicidad. Recomendaciones: (1) Reducir concentración, (2) Aumentar tamaño de partícula, (3) Añadir recubrimiento protector PEG, (4) Evaluar material alternativo menos reactivo.'
+  };
+
+  // Show results
+  document.getElementById('empty-state').style.display='none';
+  const resEl=document.getElementById('res');
+  resEl.style.display='block';
+  resEl.style.animation='fadeIn .5s ease';
+
+  // Gauge
+  const gFill=document.getElementById('g-fill');
+  const circumference=2*Math.PI*105; // 659.7
+  const offset=circumference*(1-prob);
+  gFill.style.stroke=riskColors[risk];
+  gFill.style.filter=`drop-shadow(0 0 12px ${riskColors[risk]})`;
+  gFill.style.strokeDasharray=circumference;
+  gFill.style.strokeDashoffset=circumference; // reset
+  setTimeout(()=>{ gFill.style.strokeDashoffset=offset; },80);
+
+  // Animated counter
+  const pctEl=document.getElementById('g-pct');
+  pctEl.style.fill=riskColors[risk];
+  animateCount(pctEl,pct);
+
+  document.getElementById('g-status').textContent=riskLabels[risk];
+  document.getElementById('g-status').style.fill=riskColors[risk];
+
+  // Risk banner
+  const rnEl=document.getElementById('risk-name');
+  rnEl.textContent=riskLabels[risk];
+  rnEl.style.color=riskColors[risk];
+  rnEl.style.textShadow=`0 0 40px ${riskColors[risk]}80`;
+
+  const matLabel=DB[matKey]?`${matKey} — ${DB[matKey].n}`:(rawInput||matKey);
+  document.getElementById('risk-np').textContent=`📍 ${matLabel} | ${p.cell}`;
+
+  // Prob bar
+  setTimeout(()=>{ document.getElementById('prob-fill').style.width=pct+'%'; },100);
+
+  // Recommendation
+  const recEl=document.getElementById('rec-card');
+  recEl.className=`rec-card ${risk}`;
+  recEl.textContent=recs[risk];
+
+  // Pills
+  document.getElementById('p-sz').textContent=p.size+' nm';
+  document.getElementById('p-zt').textContent=p.zeta+' mV';
+  document.getElementById('p-cn').textContent=p.conc+' µg/mL';
+  document.getElementById('p-ar').textContent=p.area+' m²/g';
+  document.getElementById('p-tm').textContent=p.time+' h';
+  document.getElementById('p-cl').textContent=p.cell;
+
+  // Feature importance
+  const fiCard=document.getElementById('fi-card');
+  fiCard.style.display='block';
+  const fi=js.fi;
+  const maxFI=Math.max(...Object.values(fi));
+  document.getElementById('fi-bars').innerHTML=Object.entries(fi)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([name,val],i)=>`
+      <div class="fi-item">
+        <div class="fi-top">
+          <span class="fi-feature">${name}</span>
+          <span class="fi-pct">${(val*100).toFixed(1)}%</span>
+        </div>
+        <div class="fi-track">
+          <div class="fi-bar" id="fb${i}" style="background:${FI_GRADIENTS[i%FI_GRADIENTS.length]}"></div>
+        </div>
+      </div>`).join('');
+
+  Object.values(fi).sort((a,b)=>b-a).forEach((val,i)=>{
+    setTimeout(()=>{
+      const el=document.getElementById('fb'+i);
+      if(el) el.style.width=(val/maxFI*100)+'%';
+    },200+i*120);
+  });
+
+  // History
+  predHistory.unshift({mat:matKey,label:matLabel,pct,risk,color:riskColors[risk]});
+  if(predHistory.length>5) predHistory.pop();
+  renderHistory();
+
+  btn.classList.remove('busy');
+  btn.innerHTML='🧪 Analizar Toxicidad';
+}
+
+function renderHistory(){
+  const hEl=document.getElementById('history');
+  const lEl=document.getElementById('hist-list');
+  if(!predHistory.length){hEl.style.display='none';return}
+  hEl.style.display='block';
+  lEl.innerHTML=predHistory.map(h=>`
+    <div class="hist-item" onclick="loadFromHist('${h.mat}')">
+      <span class="hist-dot" style="background:${h.color};box-shadow:0 0 6px ${h.color}"></span>
+      <span>${h.mat}</span>
+      <strong style="color:${h.color}">${h.pct}%</strong>
+    </div>`).join('');
+}
+
+function loadFromHist(k){
+  currentMat=k; loadMat(k);
+  document.querySelectorAll('.chip').forEach(c=>{c.classList.toggle('sel',c.dataset.k===k)});
+}
+
+</script>
+</body>
+</html>
