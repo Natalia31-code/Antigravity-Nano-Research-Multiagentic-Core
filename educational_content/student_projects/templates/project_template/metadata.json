@@ -1,0 +1,128 @@
+{
+  "project": {
+    "name": "nombre-proyecto",
+    "title": "Título Completo del Proyecto",
+    "generation": "2026",
+    "submission_date": "YYYY-MM-DD",
+    "version": "1.0.0"
+  },
+  "author": {
+    "name": "Tu Nombre Completo",
+    "github": "tu-usuario-github",
+    "email": "tu-email@university.edu",
+    "student_id": "20230123",
+    "orcid": "0000-0002-XXXX-XXXX",
+    "linkedin": "https://linkedin.com/in/tu-perfil",
+    "website": "https://tu-sitio-web.com"
+  },
+  "academic": {
+    "course": "IA Aplicada a Nanotecnología",
+    "course_code": "NANO-AI-601",
+    "university": "Universidad XYZ",
+    "department": "Departamento de Química Computacional",
+    "advisor": "Mtro. Luis José Yudico Anaya",
+    "semester": "Primavera 2026",
+    "grade": null,
+    "evaluation_date": null,
+    "comments": null
+  },
+  "technical": {
+    "primary_language": "Python",
+    "python_version": "3.11",
+    "frameworks": [
+      "PyTorch",
+      "LangChain",
+      "FastAPI",
+      "Streamlit"
+    ],
+    "ml_models": [
+      "Graph Neural Networks",
+      "Random Forest",
+      "Support Vector Machine"
+    ],
+    "agent_framework": "LangChain",
+    "scientific_tools": [
+      "RDKit",
+      "ASE",
+      "OpenMM"
+    ],
+    "deployment": {
+      "api": "FastAPI + Uvicorn",
+      "frontend": "Streamlit",
+      "containerization": "Docker",
+      "hosting": "Render"
+    },
+    "database": "PostgreSQL",
+    "testing": "pytest"
+  },
+  "research": {
+    "area": "Nanotoxicología",
+    "subfield": "Predicción de Toxicidad con ML",
+    "keywords": [
+      "nanoparticles",
+      "toxicity prediction",
+      "graph neural networks",
+      "multi-agent systems",
+      "SOAP descriptors"
+    ],
+    "abstract": "Este proyecto desarrolla un sistema multi-agente para predecir la toxicidad de nanopartículas metálicas usando Graph Neural Networks. Integra descriptores moleculares SOAP con arquitecturas GCN para lograr 87% de accuracy.",
+    "methodology": "Supervised Learning con validación cruzada k-fold",
+    "dataset": {
+      "name": "NanoTox-1000",
+      "size": 1000,
+      "source": "Materials Project + Literatura",
+      "url": null
+    },
+    "results": {
+      "accuracy": 0.873,
+      "precision": 0.852,
+      "recall": 0.881,
+      "f1_score": 0.866
+    },
+    "doi": null,
+    "paper_url": null,
+    "dataset_doi": null
+  },
+  "repository": {
+    "original": "https://github.com/tu-usuario/tu-proyecto",
+    "institutional_archive": null,
+    "institutional_fork": null,
+    "archive_commit": null,
+    "archive_date": null,
+    "license": "MIT",
+    "stars": 0,
+    "forks": 0
+  },
+  "units_coverage": {
+    "unit_1_nanoscale_modeling": true,
+    "unit_2_molecular_simulation": true,
+    "unit_3_ml_nanomaterials": true,
+    "unit_4_applied_ai": true,
+    "unit_5_multi_agent": true,
+    "unit_6_integration": true
+  },
+  "deliverables": {
+    "u6_propuesta": true,
+    "u6_plan_tecnico": true,
+    "u6_implementacion": true,
+    "u6_reporte_final": true,
+    "u6_reflexion": true,
+    "readme_complete": true,
+    "code_documented": true,
+    "api_deployed": true,
+    "tests_included": false
+  },
+  "links": {
+    "demo_url": null,
+    "video_demo": null,
+    "slides": null,
+    "documentation": null
+  },
+  "awards": [],
+  "publications_derived": [],
+  "citations": 0,
+  "downloads": 0,
+  "last_updated": "YYYY-MM-DD",
+  "status": "submitted",
+  "notes": ""
+}
