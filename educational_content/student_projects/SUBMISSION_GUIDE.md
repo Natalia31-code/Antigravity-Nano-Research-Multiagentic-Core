@@ -3,7 +3,7 @@
 **Versión**: 1.0  
 **Fecha**: Junio 2026  
 **Curso**: IA Aplicada a Nanotecnología  
-**Instructor**: Dr. Luis Yudico ([@ljyudico](https://github.com/ljyudico))
+**Instructor**: Mtro. Luis José Yudico Anaya ([@ljyudico](https://github.com/ljyudico))
 
 ---
 
@@ -172,7 +172,7 @@ Edita `educational_content/student_projects/2026_generation/tu-proyecto-nombre/m
   "academic": {
     "course": "IA Aplicada a Nanotecnología",
     "university": "Universidad XYZ",
-    "advisor": "Dr. Luis Yudico",
+    "advisor": "Mtro. Luis José Yudico Anaya",
     "grade": null,
     "evaluation_date": null
   },
@@ -318,7 +318,7 @@ git push origin student/tu-nombre-proyecto
 
 ## 🙏 Agradecimientos
 
-Agradezco al Dr. Luis Yudico por la mentoría durante el desarrollo de este proyecto.
+Agradezco al Mtro. Luis José Yudico Anaya por la mentoría durante el desarrollo de este proyecto.
 ```
 
 4. **Labels**: Agregar etiqueta `student-project`
@@ -400,8 +400,8 @@ cp data/raw/ejemplo.csv data/sample/  # Solo 100 filas
 ## 📧 Contacto
 
 **Dudas sobre el proceso de entrega:**  
-Dr. Luis Yudico  
-Email: ljyudico@university.edu  
+Mtro. Luis José Yudico Anaya  
+Email: ljyudico@ucemich.edu.mx  
 GitHub: [@ljyudico](https://github.com/ljyudico)
 
 ---
